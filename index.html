@@ -47,6 +47,13 @@
       box-shadow: inset 0 4px 6px rgba(0, 0, 0, 0.2);
     }
 
+    .last-reset {
+      margin-top: 10px;
+      font-size: 1rem;
+      font-weight: bold;
+      color: #ffeb3b;
+    }
+
     button {
       background: linear-gradient(135deg, #6dd5ed, #2193b0);
       border: none;
@@ -75,6 +82,8 @@
     <div id="timerDisplay">00:00:00</div>
     <button id="startTimer">Start</button>
     <button id="stopTimer">Stop</button>
+    <button id="resetTimer">Reset</button>
+    <div class="last-reset" id="lastResetDisplay">Last Reset: --:--:--</div>
   </div>
 
   <script type="module">
@@ -105,8 +114,10 @@
 
     // DOM Elements
     const timerDisplay = document.getElementById("timerDisplay");
+    const lastResetDisplay = document.getElementById("lastResetDisplay");
     const startTimerButton = document.getElementById("startTimer");
     const stopTimerButton = document.getElementById("stopTimer");
+    const resetTimerButton = document.getElementById("resetTimer");
 
     // Start Timer
     startTimerButton.addEventListener("click", () => {
@@ -127,12 +138,26 @@
       updateFirebase();
     });
 
+    // Reset Timer
+    resetTimerButton.addEventListener("click", () => {
+      const currentTime = formatTime(totalSeconds);
+      updateLastResetInFirebase(currentTime);
+      totalSeconds = 0;
+      updateTimerDisplay();
+      updateFirebase();
+    });
+
     // Update Timer Display
     function updateTimerDisplay() {
-      const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, "0");
-      const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, "0");
-      const seconds = String(totalSeconds % 60).padStart(2, "0");
-      timerDisplay.textContent = `${hours}:${minutes}:${seconds}`;
+      timerDisplay.textContent = formatTime(totalSeconds);
+    }
+
+    // Format Time
+    function formatTime(seconds) {
+      const hours = String(Math.floor(seconds / 3600)).padStart(2, "0");
+      const minutes = String(Math.floor((seconds % 3600) / 60)).padStart(2, "0");
+      const secs = String(seconds % 60).padStart(2, "0");
+      return `${hours}:${minutes}:${secs}`;
     }
 
     // Update Firebase Database
@@ -144,6 +169,13 @@
       });
     }
 
+    // Update Last Reset Time in Firebase
+    function updateLastResetInFirebase(lastResetTime) {
+      const resetRef = ref(database, "tracker/lastReset");
+      set(resetRef, lastResetTime);
+      lastResetDisplay.textContent = `Last Reset: ${lastResetTime}`;
+    }
+
     // Sync Data from Firebase
     const timerRef = ref(database, "tracker");
     onValue(timerRef, (snapshot) => {
@@ -151,6 +183,9 @@
       if (data) {
         totalSeconds = data.totalSeconds || 0;
         updateTimerDisplay();
+        if (data.lastReset) {
+          lastResetDisplay.textContent = `Last Reset: ${data.lastReset}`;
+        }
       }
     });
   </script>
