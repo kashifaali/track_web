@@ -1,46 +1,69 @@
-let timer;
-let totalSeconds = 0;
+// Firebase Configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyAIAErtXAMjiK46SBm3bK2Fn428ShRFNlk",
+  authDomain: "trackweb-657dd.firebaseapp.com",
+  databaseURL: "https://trackweb-657dd-default-rtdb.firebaseio.com",
+  projectId: "trackweb-657dd",
+  storageBucket: "trackweb-657dd.firebasestorage.app",
+  messagingSenderId: "518786304412",
+  appId: "1:518786304412:web:5c7a7bc42f918e78336059",
+  measurementId: "G-QYJHNNTC52"
+};
+
+// Initialize Firebase
+const app = firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+
+// Timer Logic
 let isRunning = false;
+let timerInterval;
+let totalSeconds = 0;
 
-const hoursEl = document.getElementById('hours');
-const minutesEl = document.getElementById('minutes');
-const secondsEl = document.getElementById('seconds');
-const dailyLogEl = document.getElementById('dailyLog');
-const startButton = document.getElementById('startButton');
-const stopButton = document.getElementById('stopButton');
+// DOM Elements
+const timerDisplay = document.getElementById("timerDisplay");
+const startTimerButton = document.getElementById("startTimer");
+const stopTimerButton = document.getElementById("stopTimer");
 
-startButton.addEventListener('click', () => {
+// Start Timer
+startTimerButton.addEventListener("click", () => {
   if (!isRunning) {
     isRunning = true;
-    timer = setInterval(() => {
+    timerInterval = setInterval(() => {
       totalSeconds++;
       updateTimerDisplay();
+      updateFirebase();
     }, 1000);
   }
 });
 
-stopButton.addEventListener('click', () => {
-  if (isRunning) {
-    isRunning = false;
-    clearInterval(timer);
-    updateDailyLog();
-  }
+// Stop Timer
+stopTimerButton.addEventListener("click", () => {
+  isRunning = false;
+  clearInterval(timerInterval);
+  updateFirebase();
 });
 
+// Update Timer Display
 function updateTimerDisplay() {
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-
-  hoursEl.textContent = String(hours).padStart(2, '0');
-  minutesEl.textContent = String(minutes).padStart(2, '0');
-  secondsEl.textContent = String(seconds).padStart(2, '0');
+  const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, "0");
+  const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, "0");
+  const seconds = String(totalSeconds % 60).padStart(2, "0");
+  timerDisplay.textContent = `${hours}:${minutes}:${seconds}`;
 }
 
-function updateDailyLog() {
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-
-  dailyLogEl.textContent = `Total Study Time: ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+// Update Firebase
+function updateFirebase() {
+  database.ref("tracker").set({
+    totalSeconds: totalSeconds,
+    lastUpdated: Date.now(),
+  });
 }
+
+// Sync Data from Firebase
+database.ref("tracker").on("value", (snapshot) => {
+  const data = snapshot.val();
+  if (data) {
+    totalSeconds = data.totalSeconds || 0;
+    updateTimerDisplay();
+  }
+});

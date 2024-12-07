@@ -4,23 +4,155 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Study Tracker</title>
-  <link rel="stylesheet" href="styles.css">
+  <style>
+    /* General Reset */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #4e54c8, #8f94fb);
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .container {
+      text-align: center;
+      background-color: rgba(0, 0, 0, 0.6);
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      width: 90%;
+      max-width: 400px;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 20px;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    }
+
+    #timerDisplay {
+      font-size: 3rem;
+      margin-bottom: 20px;
+      background-color: #333;
+      padding: 15px;
+      border-radius: 5px;
+      box-shadow: inset 0 4px 6px rgba(0, 0, 0, 0.2);
+    }
+
+    button {
+      background: linear-gradient(135deg, #6dd5ed, #2193b0);
+      border: none;
+      color: #fff;
+      font-size: 1.2rem;
+      padding: 10px 20px;
+      margin: 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: transform 0.2s ease, background-color 0.3s ease;
+    }
+
+    button:hover {
+      background: linear-gradient(135deg, #2193b0, #6dd5ed);
+      transform: scale(1.05);
+    }
+
+    button:active {
+      transform: scale(0.95);
+    }
+  </style>
 </head>
 <body>
   <div class="container">
     <h1>Study Tracker</h1>
-    <div class="timer">
-      <span id="hours">00</span>:<span id="minutes">00</span>:<span id="seconds">00</span>
-    </div>
-    <div class="buttons">
-      <button id="startButton">Start</button>
-      <button id="stopButton">Stop</button>
-    </div>
-    <div class="log">
-      <h2>Today's Study Log</h2>
-      <p id="dailyLog">Total Study Time: 00:00:00</p>
-    </div>
+    <div id="timerDisplay">00:00:00</div>
+    <button id="startTimer">Start</button>
+    <button id="stopTimer">Stop</button>
   </div>
-  <script src="script.js"></script>
+
+  <script type="module">
+    // Import Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
+
+    // Firebase Configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyAIAErtXAMjiK46SBm3bK2Fn428ShRFNlk",
+      authDomain: "trackweb-657dd.firebaseapp.com",
+      databaseURL: "https://trackweb-657dd-default-rtdb.firebaseio.com",
+      projectId: "trackweb-657dd",
+      storageBucket: "trackweb-657dd.appspot.com",
+      messagingSenderId: "518786304412",
+      appId: "1:518786304412:web:5c7a7bc42f918e78336059",
+      measurementId: "G-QYJHNNTC52"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
+
+    // Timer Variables
+    let isRunning = false;
+    let timerInterval;
+    let totalSeconds = 0;
+
+    // DOM Elements
+    const timerDisplay = document.getElementById("timerDisplay");
+    const startTimerButton = document.getElementById("startTimer");
+    const stopTimerButton = document.getElementById("stopTimer");
+
+    // Start Timer
+    startTimerButton.addEventListener("click", () => {
+      if (!isRunning) {
+        isRunning = true;
+        timerInterval = setInterval(() => {
+          totalSeconds++;
+          updateTimerDisplay();
+          updateFirebase();
+        }, 1000);
+      }
+    });
+
+    // Stop Timer
+    stopTimerButton.addEventListener("click", () => {
+      isRunning = false;
+      clearInterval(timerInterval);
+      updateFirebase();
+    });
+
+    // Update Timer Display
+    function updateTimerDisplay() {
+      const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, "0");
+      const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, "0");
+      const seconds = String(totalSeconds % 60).padStart(2, "0");
+      timerDisplay.textContent = `${hours}:${minutes}:${seconds}`;
+    }
+
+    // Update Firebase Database
+    function updateFirebase() {
+      const timerRef = ref(database, "tracker");
+      set(timerRef, {
+        totalSeconds: totalSeconds,
+        lastUpdated: Date.now(),
+      });
+    }
+
+    // Sync Data from Firebase
+    const timerRef = ref(database, "tracker");
+    onValue(timerRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        totalSeconds = data.totalSeconds || 0;
+        updateTimerDisplay();
+      }
+    });
+  </script>
 </body>
 </html>
